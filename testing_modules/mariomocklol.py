@@ -16,53 +16,43 @@ BLUE = (0, 0, 255)
 clock = pygame.time.Clock()
 FPS = 60
 
-# Player attributes
 player_size = 20
 player_color = BLUE
-player_x, player_y = 79, 800
+player_x, player_y = 79, SCREEN_HEIGHT - player_size - 100
 player_speed = 4
-player_jump = 8
+player_jump = 6
 player_velocity_y = 0
-gravity = 0.4
+gravity = 0.2
 is_jumping = False
 
-# Camera offset (start at 0)
-camera_offset_x = 0
+floor_height = 100  
+floor_y = SCREEN_HEIGHT - floor_height
 
-# Platform attributes
+goal_x, goal_y = 1101, 301  
+goal = pygame.Rect(goal_x, goal_y, 50, 50)  
+
 platform_width = 100
 platform_height = 10
 
 platforms = [
-    pygame.Rect(79, 820, platform_width, platform_height),
-    pygame.Rect(185, 747, platform_width, platform_height),
-    pygame.Rect(322, 667, platform_width, platform_height),
-    pygame.Rect(174, 609, platform_width, platform_height),
-    pygame.Rect(332, 549, platform_width, platform_height),
-    pygame.Rect(510, 532, platform_width, platform_height),
-    pygame.Rect(663, 455, platform_width, platform_height),
-    pygame.Rect(734, 572, platform_width, platform_height),
-    pygame.Rect(893, 473, platform_width, platform_height),
-    pygame.Rect(1002, 375, platform_width, platform_height),
-    pygame.Rect(1186, 346, platform_width, platform_height),
-    pygame.Rect(1088, 546, platform_width, platform_height),
-    pygame.Rect(972, 531, platform_width, platform_height),
-    pygame.Rect(794, 369, platform_width, platform_height),
-    pygame.Rect(715, 307, platform_width, platform_height),
-    pygame.Rect(625, 237, platform_width, platform_height),
-    pygame.Rect(783, 172, platform_width, platform_height),
-    pygame.Rect(906, 129, platform_width, platform_height),
-    pygame.Rect(1061, 86, platform_width, platform_height),
+    pygame.Rect(378, 645, platform_width, platform_height),
+    pygame.Rect(599, 587, platform_width, platform_height),
+    pygame.Rect(287, 759, platform_width, platform_height),
+    pygame.Rect(994, 595, platform_width, platform_height),
+    pygame.Rect(907, 515, platform_width, platform_height),
+    pygame.Rect(1054, 436, platform_width, platform_height),
+    pygame.Rect(959, 370, platform_width, platform_height),
+    pygame.Rect(1101, 301, platform_width, platform_height),
+    pygame.Rect(1338, 299, platform_width, platform_height)
 ]
 
-traps = []
-
 start_time = pygame.time.get_ticks()
-
-goal = pygame.Rect(1200, 50, 50, 50)
-
-# Game loop
 running = True
+
+camera_offset_x = 0
+
+font = pygame.font.Font(None, 36)
+
 while running:
     screen.fill(BLACK)
 
@@ -71,31 +61,71 @@ while running:
             running = False
 
     keys = pygame.key.get_pressed()
-
-    # Player movement
     if keys[pygame.K_LEFT]:
         player_x -= player_speed
     if keys[pygame.K_RIGHT]:
         player_x += player_speed
+    
+    
+    player_velocity_y += gravity
+    next_y = player_y + player_velocity_y
+    
+    
+    next_player_rect = pygame.Rect(player_x, next_y, player_size, player_size)
+    
+    
+    collision_detected = False
+    for platform in platforms:
+        if next_player_rect.colliderect(platform):
+            
+            if player_velocity_y > 0:
+                player_y = platform.y - player_size
+                player_velocity_y = 0
+                is_jumping = False
+                collision_detected = True
+                break
+    
+    
+    if not collision_detected:
+        player_y = next_y
 
+    
+    if player_y + player_size >= floor_y:
+        player_y = floor_y - player_size
+        player_velocity_y = 0
+        is_jumping = False
+
+    
     if keys[pygame.K_UP] and not is_jumping:
         player_velocity_y = -player_jump
         is_jumping = True
 
-    # Apply gravity
-    player_velocity_y += gravity
-    player_y += player_velocity_y
+    
+    camera_offset_x = player_x - SCREEN_WIDTH // 2
 
-    # Collision with platforms
-    player_rect = pygame.Rect(player_x, player_y, player_size, player_size)
+    
+    floor_rect = pygame.Rect(-camera_offset_x, floor_y, 5000, floor_height)  
+    pygame.draw.rect(screen, WHITE, floor_rect)
+
+    
+    goal_rect = pygame.Rect(goal_x - camera_offset_x, goal_y, goal.width, goal.height)
+    pygame.draw.rect(screen, GREEN, goal_rect)
+
+    
+    player_screen_x = SCREEN_WIDTH // 2
+    player_rect = pygame.Rect(player_screen_x, player_y, player_size, player_size)
+    pygame.draw.rect(screen, player_color, player_rect)
+
+    
     for platform in platforms:
-        if player_rect.colliderect(platform) and player_velocity_y > 0:
-            player_y = platform.top - player_size
-            player_velocity_y = 0
-            is_jumping = False
+        platform_rect = pygame.Rect(
+            platform.x - camera_offset_x, platform.y, platform.width, platform_height
+        )
+        pygame.draw.rect(screen, WHITE, platform_rect)
 
-    # Check for goal collision
-    if player_rect.colliderect(goal):
+    
+    player_world_rect = pygame.Rect(player_x, player_y, player_size, player_size)
+    if player_world_rect.colliderect(goal):
         end_time = pygame.time.get_ticks()
         time_diff = end_time - start_time
         milliseconds = time_diff % 1000
@@ -104,57 +134,21 @@ while running:
         print(f"Your time: {minutes}:{seconds:02d}.{milliseconds:03d}")
         running = False
 
-    # Check for traps
-    for trap in traps:
-        if player_rect.colliderect(trap):
-            print("You hit a trap! Game over.")
-            running = False
-
-    # Check if player falls off the screen
+    
     if player_y > SCREEN_HEIGHT:
         print("Game Over!")
         running = False
 
-    # Update camera offset based on player position
-    # Center the player horizontally on the screen
-    camera_offset_x = player_x - SCREEN_WIDTH // 2
-
-    # Draw platforms
-    for platform in platforms:
-        platform_rect = pygame.Rect(
-            platform.x - camera_offset_x, platform.y, platform.width, platform.height
-        )
-        pygame.draw.rect(screen, WHITE, platform_rect)
-
-    # Draw traps
-    for trap in traps:
-        trap_rect = pygame.Rect(
-            trap.x - camera_offset_x, trap.y, trap.width, trap.height
-        )
-        pygame.draw.rect(screen, RED, trap_rect)
-
-    # Draw goal
-    goal_rect = pygame.Rect(goal.x - camera_offset_x, goal.y, goal.width, goal.height)
-    pygame.draw.rect(screen, GREEN, goal_rect)
-
-    # Draw player
-    player_screen_rect = pygame.Rect(
-        SCREEN_WIDTH // 2, player_y, player_size, player_size
-    )
-    pygame.draw.rect(screen, player_color, player_screen_rect)
-
-    # Display timer
+    
     current_time = pygame.time.get_ticks()
     time_diff = current_time - start_time
     milliseconds = time_diff % 1000
     seconds = (time_diff // 1000) % 60
     minutes = time_diff // 60000
     time_str = f"{minutes}:{seconds:02d}.{milliseconds:03d}"
-    font = pygame.font.Font(None, 36)
     text = font.render(time_str, True, WHITE)
     screen.blit(text, (SCREEN_WIDTH - 150, 20))
 
-    # Update the display
     pygame.display.flip()
     clock.tick(FPS)
 

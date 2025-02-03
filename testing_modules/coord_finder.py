@@ -6,6 +6,9 @@ window = pygame.display.set_mode((1440, 900))
 pygame.display.set_caption("Coordinate Finder")
 font = pygame.font.Font(None, 36)
 
+platform_width = 100
+platform_height = 10
+
 def save_points_to_file(points, base_name="point"):
     index = 1
     while True:
@@ -39,7 +42,7 @@ if load_file:
     if points is not None:
         window.fill((255, 255, 255))
         for i, point in enumerate(points, start=1):
-            pygame.draw.circle(window, (0, 0, 0), point, 5)
+            pygame.draw.rect(window, (0, 0, 0), (x, y, platform_width, platform_height)),
             text = font.render(str(i), True, (0, 0, 0))
             window.blit(text, (point[0] + 10, point[1] - 10))
         pygame.display.flip()
@@ -53,15 +56,16 @@ else:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
-                pygame.draw.circle(window, (0, 0, 0), (x, y), 5)
+                pygame.draw.rect(window, (0, 0, 0), (x, y, platform_width, platform_height)),
                 text = font.render(str(label), True, (0, 0, 0))
                 window.blit(text, (x + 10, y - 10))
                 points.append((x, y))
-                print(f"Point {label}: ({x}, {y})")
+                print(f"pygame.Rect({x}, {y}, platform_width, platform_height)")
                 label += 1
         pygame.display.flip()
 
     save_points_to_file(points)
 
 pygame.quit()
+
 
